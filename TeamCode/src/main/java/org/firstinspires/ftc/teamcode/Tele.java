@@ -28,7 +28,7 @@ public class Tele extends LinearOpMode {
 
     //Set Up
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
-    private DcMotorEx wheel, outtake, intake;
+    private DcMotorEx wheel, outtake, intake, turret;
     private Servo servo;
     private ColorSensor FS,SS,TS;
     RobotCords robot;
@@ -55,6 +55,38 @@ public class Tele extends LinearOpMode {
     private boolean Red = true;
 
     //Outtake
+    public void turretLoop(){
+        OP.upadate;
+        Pose2D op = OP.getPosition();
+        double currentX = -op.getY(Distacne.INCH);
+        double currentY = op.getX(Distacne.INCH);
+        double goalX = 100;
+        double goalY = 100;
+
+        double deltaX = goalX - currentX;
+        double deltaY = goalY - currentY;
+
+        double targetRadians = Math.tan(deltaX/deltaY);
+        double targetDegrees = Math.toDegrees(targetRadians);
+
+        double pos;
+        if(targetDegrees > 0){
+            pos = 1.1111*(targetDegrees) + 400;
+        }
+        if(targetDegrees < 0){
+            pos = 1.1111*(targetDegrees);
+        }
+
+        turret.setPosition(pos);
+        turret.runMode(RUN_TO_POSITION);
+        turret.setPower(0.5);
+        
+        double tol = 2;
+        if(pos-tol < turret.getCurrentPosition() && turret.getCurrentPosition() < pos+tol){
+            turret.setPower(0)
+        }
+
+    }
     public enum OuttakeState {
         IDLE,
         SPIN_UP,
@@ -216,6 +248,7 @@ public class Tele extends LinearOpMode {
 
         intake = hardwareMap.get(DcMotorEx.class, "I");
         wheel = hardwareMap.get(DcMotorEx.class, "W");
+        turret = harwareMap.get(DcMotorEx.class, "T");
 
         servo = hardwareMap.get(Servo.class,"S");
 
@@ -245,6 +278,7 @@ public class Tele extends LinearOpMode {
                 wheel,
                 outtake,
                 intake,
+                turret,
                 servo,
                 OP,
                 VS,
@@ -287,6 +321,7 @@ public class Tele extends LinearOpMode {
                 outtakeMode = OuttakeState.IDLE;
             }
             outtakeLoop();
+            turretLoop();
 
             if(gamepad2.left_bumper){
                 color = 1;
