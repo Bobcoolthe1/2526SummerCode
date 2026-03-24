@@ -35,10 +35,9 @@ public class Tele extends LinearOpMode {
     private double Tag = 21;
     private GoBildaPinpointDriver OP;
     private VoltageSensor VS;
-
     //Constants
     private boolean Red = true;
-
+    boolean bWasPressed = false;
 
     //Outtake
     public enum OuttakeState {
@@ -50,8 +49,7 @@ public class Tele extends LinearOpMode {
     }
     OuttakeState outtakeMode = OuttakeState.IDLE;
     private ElapsedTime OT = new ElapsedTime();
-    private double shotTol = 300;
-    //TODO: Find speed
+    private double shotTol = 20;
     private double servoSpeed = 150;
     private void outtakeLoop(){
         switch (outtakeMode){
@@ -61,14 +59,20 @@ public class Tele extends LinearOpMode {
                 break;
             case SPIN_UP:
                 outtake.setVelocity(wheelVel());
-                if (Math.abs(outtake.getVelocity() - wheelVel()) < shotTol) {
+                if (Math.abs(outtake.getVelocity() - wheelVel()) < shotTol && wheelMode == WheelState.IDLE) {
                     outtakeMode = OuttakeState.SHOT;
+                    telemetry.addLine("Shotting");
+                }
+                if (holes[0] == 0 && holes[1] == 0 && holes[2] == 0){
+                    outtakeMode = OuttakeState.IDLE;
+                    telemetry.addLine("No Balls In Soter");
                 }
                 break;
             case SHOT:
                 servo.setPosition(1);
                 OT.reset();
                 outtakeMode = OuttakeState.IDLE;
+                telemetry.addLine("Input Told");
                 break;
             case UP:
                 outtake.setVelocity(wheelVel());
@@ -77,12 +81,14 @@ public class Tele extends LinearOpMode {
                     OT.reset();
                     outtakeMode = OuttakeState.DOWN;
                 }
+                telemetry.addLine("Servo Moving Up");
                 break;
             case DOWN:
                 outtake.setVelocity(wheelVel());
                 if(OT.milliseconds() > servoSpeed) {
                     outtakeMode = OuttakeState.SPIN_UP;
                 }
+                telemetry.addLine("Servo Moving Down");
                 break;
         }
     }
@@ -93,6 +99,7 @@ public class Tele extends LinearOpMode {
 
     //Wheel
     private int[] holes = new int[3];
+    private int hole = 3;
     private int color;
     private int wheelTargetPos;
     private boolean colorMatch = true;
@@ -115,19 +122,22 @@ public class Tele extends LinearOpMode {
             return 3;
         }
     }
-    public enum IntakeState{
+    public enum WheelState{
         IDLE,
         SLOT,
         MOVING,
         SHOT,
-        INTAKE
+        INTAKEMODE,
+        INTAKEMOVING,
+        INTAKEFILL
     }
-    IntakeState intakeMode = IntakeState.IDLE;
-    private void intakeLoop(){
-        switch(intakeMode){
+    WheelState wheelMode = WheelState.IDLE;
+    private void wheelLoop(){
+        switch(wheelMode){
             case IDLE:
                 findHoles();
                 wheel.setPower(0);
+                intake.setPower(0);
                 colorMatch = true;
                 break;
             case SHOT:
@@ -145,28 +155,18 @@ public class Tele extends LinearOpMode {
                 if(!colorMatch){
                     if(holes[0] == 1 || holes[0] == 2){
                         wheelTargetPos = 200;
+                        wheelMode = WheelState.MOVING;
                     }else if(holes[1] == 1 || holes[1] == 2){
                         wheelTargetPos = 300;
+                        wheelMode = WheelState.MOVING;
                     }else if(holes[2] == 1 || holes[2] == 2){
                         wheelTargetPos = 400;
+                        wheelMode = WheelState.MOVING;
                     }else{
-                        wheelTargetPos = wheel.getCurrentPosition();
+                        wheelMode = WheelState.IDLE;
                     }
                 }
-
-                intakeMode = IntakeState.MOVING;
-                break;
-            case INTAKE:
-                if(0 == holes[0]){
-                    wheelTargetPos = 200-180;
-                }else if(0 == holes[1]){
-                    wheelTargetPos = 300-180;
-                }else if(0 == holes[2]){
-                    wheelTargetPos = 400-180;
-                }else{
-                    wheelTargetPos = wheel.getCurrentPosition();
-                }
-                intakeMode = IntakeState.MOVING;
+                telemetry.addLine("Finding Color");
                 break;
             case MOVING:
                 wheel.setTargetPosition(wheelTargetPos);
@@ -176,10 +176,48 @@ public class Tele extends LinearOpMode {
                 double tol = 2;
                 if(wheel.getCurrentPosition() - tol < wheelTargetPos &&
                         wheelTargetPos < wheel.getCurrentPosition() + tol){
-                    intakeMode = IntakeState.IDLE;
+                    wheelMode = WheelState.IDLE;
                 }
 
                 intake.setPower(0);
+                break;
+            case INTAKEMODE:
+                findHoles();
+                hole = 3;
+                if(0 == holes[0]){
+                    wheelTargetPos = 100;
+                    hole = 0;
+                }else if(0 == holes[1]){
+                    wheelTargetPos = 200;
+                    hole = 1;
+                }else if(0 == holes[2]){
+                    wheelTargetPos = 300;
+                    hole = 2;
+                }else{
+                    wheelMode = WheelState.IDLE;
+                }
+
+                intake.setPower(0);
+                break;
+            case INTAKEMOVING:
+                wheel.setTargetPosition(wheelTargetPos);
+                wheel.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                wheel.setPower(0.5);
+
+                tol = 2;
+                if(wheel.getCurrentPosition() - tol < wheelTargetPos &&
+                        wheelTargetPos < wheel.getCurrentPosition() + tol){
+                    wheelMode = WheelState.INTAKEFILL;
+                }
+
+                intake.setPower(0);
+                break;
+            case INTAKEFILL:
+                findHoles();
+                if (holes[hole] == 1 || holes[hole] == 2){
+                    wheelMode = WheelState.INTAKEMODE;
+                }
+                intake.setPower(1);
                 break;
         }
     }
@@ -279,15 +317,24 @@ public class Tele extends LinearOpMode {
             }
             outtakeLoop();
 
+            if (gamepad1.b && !bWasPressed) {
+                if (wheelMode == WheelState.IDLE) {
+                    wheelMode = WheelState.INTAKEMODE;
+                } else {
+                    wheelMode = WheelState.IDLE;
+                }
+            }
+            bWasPressed = gamepad1.b;
+
             if(gamepad1.left_bumper){
                 color = 1;
-                intakeMode = IntakeState.SLOT;
+                wheelMode = WheelState.SLOT;
             }
             if(gamepad1.right_bumper){
                 color = 2;
-                intakeMode = IntakeState.SLOT;
+                wheelMode = WheelState.SLOT;
             }
-            intakeLoop();
+            wheelLoop();
 
             if(gamepad2.left_bumper){
                 Red = false;
@@ -297,6 +344,7 @@ public class Tele extends LinearOpMode {
             }
 
             telemetry.addData("OuttakeState",outtakeMode);
+            telemetry.addData("WheelState",wheelMode);
             telemetry.addData("Red",Red);
             telemetry.update();
             idle();
