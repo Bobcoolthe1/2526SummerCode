@@ -327,6 +327,7 @@ public class Tele extends LinearOpMode {
             bWasPressed = gamepad1.b;
 
 
+
             if(gamepad1.left_bumper){
                 color = 1;
                 wheelMode = WheelState.SLOT;
