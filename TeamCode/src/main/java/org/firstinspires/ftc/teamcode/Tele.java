@@ -10,12 +10,15 @@ import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.ColorRangeSensor;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.hardware.ServoImpl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
@@ -27,7 +30,7 @@ public class Tele extends LinearOpMode {
     //Set Up
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
     private DcMotorEx wheel, outtake, intake;
-    private Servo servo;
+    private Servo servo, turret;
     private ColorSensor FS,SS,TS;
     RobotCords robot;
     private Limelight3A limelight;
@@ -35,11 +38,44 @@ public class Tele extends LinearOpMode {
     private double Tag = 21;
     private GoBildaPinpointDriver OP;
     private VoltageSensor VS;
+
     //Constants
     private boolean Red = true;
     boolean bWasPressed = false;
 
     //Outtake
+    public enum TurretState {
+        IDLE,
+        AIM
+    }
+    private void turretLoop() {
+        switch (turretMode) {
+            case IDLE:
+
+                break;
+            case AIM:
+                double limAngle = 1000;
+                LLResult result = limelight.getLatestResult();
+                if (result != null && result.isValid()) {
+                    if (result.getFiducialResults() != null && !result.getFiducialResults().isEmpty()) {
+                        LLResultTypes.FiducialResult fiducial = result.getFiducialResults().get(0);
+                        limAngle = fiducial.getTargetXDegrees();
+                    }
+                }
+                telemetry.addData("Limelight",limAngle);
+                //Ajusts based on how off the camera is
+                double equation = limAngle * 1;
+
+                if(limAngle == 1000){
+                    //Makes servo spin around (this is to try and find the april tag)
+                    equation = 1;
+                }
+
+                turret.setPosition(equation);
+                break;
+        }
+    }
+    TurretState turretMode = TurretState.IDLE;
     public enum OuttakeState {
         IDLE,
         SPIN_UP,
@@ -183,21 +219,24 @@ public class Tele extends LinearOpMode {
                 break;
             case INTAKEMODE:
                 findHoles();
-                hole = 3;
-                if(0 == holes[0]){
+                if(holes[0] == 0){
                     wheelTargetPos = 100;
                     hole = 0;
-                }else if(0 == holes[1]){
+                    wheelMode = WheelState.INTAKEMOVING;
+                }else if(holes[1] == 0){
                     wheelTargetPos = 200;
                     hole = 1;
-                }else if(0 == holes[2]){
+                    wheelMode = WheelState.INTAKEMOVING;
+                }else if(holes[2] == 0){
                     wheelTargetPos = 300;
                     hole = 2;
+                    wheelMode = WheelState.INTAKEMOVING;
                 }else{
                     wheelMode = WheelState.IDLE;
                 }
 
                 intake.setPower(0);
+                telemetry.addLine("Finding Hole");
                 break;
             case INTAKEMOVING:
                 wheel.setTargetPosition(wheelTargetPos);
@@ -218,6 +257,7 @@ public class Tele extends LinearOpMode {
                     wheelMode = WheelState.INTAKEMODE;
                 }
                 intake.setPower(1);
+                telemetry.addLine("Waiting For Fill");
                 break;
         }
     }
@@ -254,6 +294,7 @@ public class Tele extends LinearOpMode {
         wheel = hardwareMap.get(DcMotorEx.class, "W");
 
         servo = hardwareMap.get(Servo.class,"S");
+        turret = hardwareMap.get(ServoImplEx.class,"S");
 
         FS = hardwareMap.get(ColorSensor.class, "FS");
         SS = hardwareMap.get(ColorSensor.class, "SS");
