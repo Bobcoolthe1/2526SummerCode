@@ -2,62 +2,61 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 @TeleOp(name = "BasicCode", group = "JR")
 public class BasicCode extends LinearOpMode {
 
-    DcMotor frontLeft, frontRight, backLeft, backRight;
+    DcMotorEx frontLeft, frontRight, backLeft, backRight, intaketest;
 
     @Override
     public void runOpMode() {
 
         // --- Hardware Map ---
-        frontLeft  = hardwareMap.get(DcMotor.class, "FL");
-        frontRight = hardwareMap.get(DcMotor.class, "FR");
-        backLeft   = hardwareMap.get(DcMotor.class, "BL");
-        backRight  = hardwareMap.get(DcMotor.class, "BR");
+        frontLeft  = hardwareMap.get(DcMotorEx.class, "FL");
+        frontRight = hardwareMap.get(DcMotorEx.class, "FR");
+        backLeft   = hardwareMap.get(DcMotorEx.class, "BL");
+        backRight  = hardwareMap.get(DcMotorEx.class, "BR");
+        intaketest = hardwareMap.get(DcMotorEx.class, "IT");
 
-        // --- Motor Directions ---
-        // Reverse LEFT side for most FTC drivetrains
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        // --- Wait for Start ---
         waitForStart();
 
         while (opModeIsActive()) {
 
-            // --- Gamepad Axes ---
-            double drive  = -gamepad1.left_stick_y;   // forward/back
-            double strafe =  gamepad1.left_stick_x;   // left/right
-            double turn   =  gamepad1.right_stick_x;  // rotation
+            double y  = -gamepad1.left_stick_y;
+            double x  = gamepad1.left_stick_x;
+            double rx = gamepad1.right_stick_x;
 
-            // --- Mecanum Math ---
-            double frontLeftPower  = drive + strafe + turn;
-            double frontRightPower = drive - strafe - turn;
-            double backLeftPower   = drive - strafe + turn;
-            double backRightPower  = drive + strafe - turn;
+            double frontLeftPower  = y + x + rx;
+            double backLeftPower   = y - x + rx;
+            double frontRightPower = y - x - rx;
+            double backRightPower  = y + x - rx;
 
-            // --- Normalize (so no motor exceeds 1.0) ---
-            double max = Math.max(
-                    Math.max(Math.abs(frontLeftPower), Math.abs(frontRightPower)),
-                    Math.max(Math.abs(backLeftPower), Math.abs(backRightPower))
-            );
-            if (max > 1.0) {
-                frontLeftPower  /= max;
-                frontRightPower /= max;
-                backLeftPower   /= max;
-                backRightPower  /= max;
+            double max = Math.max(1.0,
+                    Math.max(Math.abs(frontLeftPower),
+                            Math.max(Math.abs(backLeftPower),
+                                    Math.max(Math.abs(frontRightPower),
+                                            Math.abs(backRightPower)))));
+
+            frontLeft.setPower(frontLeftPower / max);
+            backLeft.setPower(backLeftPower / max);
+            frontRight.setPower(frontRightPower / max);
+            backRight.setPower(backRightPower / max);
+
+            if(gamepad1.b) {
+                intaketest.setPower(1);
             }
-
-            // --- Send Power ---
-            frontLeft.setPower(frontLeftPower);
-            frontRight.setPower(frontRightPower);
-            backLeft.setPower(backLeftPower);
-            backRight.setPower(backRightPower);
-
+            if(gamepad1.a){
+                intaketest.setPower(-1);
+            }
+            if(gamepad1.x){
+                intaketest.setPower(0);
+            }
         }
     }
 }
