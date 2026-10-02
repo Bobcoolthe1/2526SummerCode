@@ -5,10 +5,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-@TeleOp(name = "BasicCode", group = "JR")
-public class BasicCode extends LinearOpMode {
+@TeleOp(name = "Drive Test", group = "JR")
+public class driveTest extends LinearOpMode {
 
-    DcMotorEx frontLeft, frontRight, backLeft, backRight, intaketest;
+    DcMotorEx frontLeft, frontRight, backLeft, backRight;
 
     @Override
     public void runOpMode() {
@@ -18,7 +18,6 @@ public class BasicCode extends LinearOpMode {
         frontRight = hardwareMap.get(DcMotorEx.class, "FR");
         backLeft   = hardwareMap.get(DcMotorEx.class, "BL");
         backRight  = hardwareMap.get(DcMotorEx.class, "BR");
-        intaketest = hardwareMap.get(DcMotorEx.class, "IT");
 
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -47,16 +46,6 @@ public class BasicCode extends LinearOpMode {
             backLeft.setPower(backLeftPower / max);
             frontRight.setPower(frontRightPower / max);
             backRight.setPower(backRightPower / max);
-
-            if(gamepad1.b) {
-                intaketest.setPower(1);
-            }
-            if(gamepad1.a){
-                intaketest.setPower(-1);
-            }
-            if(gamepad1.x){
-                intaketest.setPower(0);
-            }
         }
     }
 }
