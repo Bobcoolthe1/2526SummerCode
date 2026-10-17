@@ -13,14 +13,14 @@ public class outtakeTest extends LinearOpMode {
     DcMotorEx outtake;
     ServoImplEx hoodServo;
 
-    private double motorPower = 0.0;
+    private double motorPower = 0.5;
     private double servoPos = 0.5;
 
     @Override
     public void runOpMode() {
 
         outtake = hardwareMap.get(DcMotorEx.class, "O");
-        outtake.setDirection(DcMotorSimple.Direction.FORWARD);
+        outtake.setDirection(DcMotorSimple.Direction.REVERSE);
 
         hoodServo = hardwareMap.get(ServoImplEx.class, "HS");
         hoodServo.setDirection(Servo.Direction.FORWARD);
@@ -29,11 +29,11 @@ public class outtakeTest extends LinearOpMode {
 
         while (opModeIsActive()) {
             if (gamepad1.dpad_up) {
-                motorPower += 0.1;
+                motorPower += 0.01;
                 sleep(250);
             }
             if (gamepad1.dpad_down) {
-                motorPower -= 0.1;
+                motorPower -= 0.01;
                 sleep(250);
             }
 
@@ -51,6 +51,10 @@ public class outtakeTest extends LinearOpMode {
 
             servoPos = Math.max(0.0, Math.min(1.0, servoPos));
             hoodServo.setPosition(servoPos);
+
+            if(gamepad1.x){
+                outtake.setDirection(DcMotorSimple.Direction.FORWARD);
+            }
 
 
             telemetry.addData("Motor Power", motorPower);
