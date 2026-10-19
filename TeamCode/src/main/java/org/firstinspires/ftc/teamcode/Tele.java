@@ -32,7 +32,7 @@ public class Tele extends LinearOpMode {
 
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
     private DcMotorEx outtake, intake;
-    private CRServoImplEx intakeLeft, intakeRight, outtakeServo;
+    private CRServoImplEx outtakeLeft, outtakeMiddle, conveyorServo;
     private Limelight3A limelight;
     private VoltageSensor VS;
     private boolean red = true;
@@ -64,19 +64,19 @@ public class Tele extends LinearOpMode {
         Increase D - If it overshoots
          */
 
-        intakeLeft = hardwareMap.get(CRServoImplEx.class,"IL");
-        intakeLeft.setDirection(CRServo.Direction.FORWARD);
-        intakeRight = hardwareMap.get(CRServoImplEx.class,"IR");
-        intakeRight.setDirection(CRServo.Direction.FORWARD);
-        outtakeServo = hardwareMap.get(CRServoImplEx.class, "OS");
-        outtakeServo.setDirection(CRServo.Direction.FORWARD);
+        outtakeMiddle = hardwareMap.get(CRServoImplEx.class,"OM");
+        outtakeMiddle.setDirection(CRServo.Direction.FORWARD);
+        outtakeLeft = hardwareMap.get(CRServoImplEx.class,"OL");
+        outtakeLeft.setDirection(CRServo.Direction.FORWARD);
+        conveyorServo = hardwareMap.get(CRServoImplEx.class,"CS");
+        conveyorServo.setDirection(CRServo.Direction.FORWARD);
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
         limelight.start();
 
         GoBildaPinpointDriver OP = hardwareMap.get(GoBildaPinpointDriver.class, "OP");
-        OP.setOffsets(-84.0, -168.0, DistanceUnit.MM);
+        OP.setOffsets(-88.6, -159.4, DistanceUnit.MM);
         OP.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
         OP.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
         OP.resetPosAndIMU();
@@ -91,9 +91,9 @@ public class Tele extends LinearOpMode {
                 backRight,
                 outtake,
                 intake,
-                intakeLeft,
-                intakeRight,
-                outtakeServo,
+                outtakeMiddle,
+                conveyorServo,
+                outtakeLeft,
                 OP,
                 VS,
                 limelight,
@@ -135,18 +135,12 @@ public class Tele extends LinearOpMode {
             //Intake
             if(gamepad1.a){
                 intake.setPower(1);
-                intakeLeft.setPower(1);
-                intakeRight.setPower(1);
             }
+            //Outtake
             if(gamepad1.b){
-                intake.setPower(-0.75);
-                intakeLeft.setPower(-0.75);
-                intakeRight.setPower(-0.75);
+                master.outtake();
             }
 
-            telemetry.addData("Red",red);
-            telemetry.update();
-            idle();
         }
     }
 }

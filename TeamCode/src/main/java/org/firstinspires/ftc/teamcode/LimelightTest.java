@@ -75,8 +75,8 @@ public class LimelightTest extends LinearOpMode {
         limelight.start();
         waitForStart();
 
-        OP = hardwareMap.get(GoBildaPinpointDriver.class, "OP");
-        OP.setOffsets(-84.0, -168.0, DistanceUnit.MM);
+        GoBildaPinpointDriver OP = hardwareMap.get(GoBildaPinpointDriver.class, "OP");
+        OP.setOffsets(-88.6, -159.4, DistanceUnit.MM);
         OP.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
         OP.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
         OP.resetPosAndIMU();

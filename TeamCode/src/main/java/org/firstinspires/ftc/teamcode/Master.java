@@ -2,16 +2,20 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.hardware.motors.RevRobotics20HdHexMotor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.qualcomm.robotcore.hardware.CRServoImplEx;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
@@ -22,7 +26,7 @@ import java.util.Deque;
 public class Master{
     private final LinearOpMode opmode;
     private final DcMotorEx frontLeft, frontRight, backLeft, backRight, outtake, intake;
-    private final CRServoImplEx intakeLeft, intakeRight, outtakeServo;
+    private final CRServoImplEx outtakeMiddle, conveyorServo, outtakeLeft;
     public boolean red;
     public double tag;
     GoBildaPinpointDriver OP;
@@ -38,9 +42,9 @@ public class Master{
                       DcMotorEx backRight,
                       DcMotorEx outtake,
                       DcMotorEx intake,
-                      CRServoImplEx intakeLeft,
-                      CRServoImplEx intakeRight,
-                      CRServoImplEx outtakeServo,
+                      CRServoImplEx outtakeMiddle,
+                      CRServoImplEx conveyorServo,
+                      CRServoImplEx outtakeLeft,
                       GoBildaPinpointDriver OP,
                       VoltageSensor batteryVoltage,
                       Limelight3A limelight,
@@ -54,9 +58,9 @@ public class Master{
         this.backRight = backRight;
         this.outtake = outtake;
         this.intake = intake;
-        this.intakeLeft = intakeLeft;
-        this.intakeRight = intakeRight;
-        this.outtakeServo = outtakeServo;
+        this.outtakeMiddle = outtakeMiddle;
+        this.conveyorServo = conveyorServo;
+        this.outtakeLeft = outtakeLeft;
         this.OP = OP;
         this.batteryVoltage = batteryVoltage;
         this.limelight = limelight;
@@ -145,10 +149,143 @@ public class Master{
         }
         stopMotors();
     }
+    private void motorInitialize(DcMotorEx motor){
+        motor.setMotorType(MotorConfigurationType.getMotorType(RevRobotics20HdHexMotor.class));
+        motor.setCurrentAlert(5000.0, CurrentUnit.MILLIAMPS);
+        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        // P=15 (Aggressive response), I=3 (Correction), D=0, F=11.7 (Calculated for REV HD Hex)
+        motor.setVelocityPIDFCoefficients(12, 0.75, 0.0, 11.7);
+        motor.setTargetPositionTolerance(2);
+    }
+    private void motorInfo(DcMotorEx motor){
+        double a = motor.getVelocity(AngleUnit.DEGREES);
+        double b = motor.getCurrentPosition();
+        double c = motor.getCurrent(CurrentUnit.MILLIAMPS);
+        opmode.telemetry.addData("Motor:", motor.getDeviceName());
+        opmode.telemetry.addData("Velocity (deg/s)", a);
+        opmode.telemetry.addData("CurrentPosition", b);
+        opmode.telemetry.addData("Current (mA)", c);
+    }
+    private double wheelSpeed(DcMotorEx motor){
+        double radius = 80;
+        double pi = 3.1415;
+        double degperSec = motor.getVelocity(AngleUnit.DEGREES);
+        return (degperSec*(pi/180)) * radius;
+    }
+    FlyWheelState FlyWheelMode = FlyWheelState.IDLE;
+    int ball = 4;
+    ElapsedTime timer;
+    double equation;
+    private enum FlyWheelState{
+        IDLE,
+        SET,
+        LAUNCH,
+        WAIT
+    }
+    private void FlyWheelLoop() {
+        switch (FlyWheelMode) {
+            case IDLE:
+                outtake.setVelocity(0, AngleUnit.DEGREES);
+                outtakeMiddle.setPower(0);
+                ball = ballColor();
+                if(ball >= 0 && ball <=2) {
+                    FlyWheelMode = FlyWheelState.SET;
+                }
+                break;
+            case SET:
+                double vel = wheelSpeed(outtake);
+                if(ball == 0){
+                    double pollenEquation = 1;
+                    equation = pollenEquation;
+                }else{
+                    double nectarEquation = 2;
+                    equation = nectarEquation;
+                }
+                outtake.setVelocity(equation, AngleUnit.DEGREES);
+
+                double threshold = 10; // Increased threshold for stability
+                double error = Math.abs(equation - vel);
+
+                if (error < threshold) {
+                    FlyWheelMode = FlyWheelState.LAUNCH;
+                }
+                break;
+            case LAUNCH:
+                outtakeMiddle.setPower(1);
+                timer.reset();
+                FlyWheelMode = FlyWheelState.WAIT;
+                break;
+            case WAIT:
+                if(timer.milliseconds() > 300){
+                    outtakeMiddle.setPower(0);
+                    FlyWheelMode = FlyWheelState.IDLE;
+                }
+                break;
+        }
+    }
+    public void outtake(){
+        motorInitialize(outtake);
+        while(opmode.opModeIsActive()){
+
+            TELESUMMER.FlyWheelState FlyWheelMode = TELESUMMER.FlyWheelState.IDLE;
+
+            motorInfo(outtake);
+            opmode.telemetry.addData("Wheel Speed m/s",wheelSpeed(outtake));
+            opmode.telemetry.update();
+        }
+    }
+    public int ballColor(){
+        int ballResult = 4;
+        for (int i = 0; i < 2; i++){
+            if(i == 0){
+                ballResult = 3;
+            }
+            opmode.sleep(50);
+            limelight.pipelineSwitch(i);
+            LLResult result = freshResult(i);
+            result = limelight.getLatestResult();
+            if (result != null && result.isValid()) {
+                ballResult = i;
+                break;
+            }
+        }
+        if(ballResult == 0){
+            opmode.telemetry.addLine("Pollen - Yellow");
+        }else if(ballResult == 1){
+            opmode.telemetry.addLine("Nectar - Red");
+        }else if(ballResult == 2){
+            opmode.telemetry.addLine("Nectar - Blue");
+        }else{
+            opmode.telemetry.addLine("None");
+        }
+        return ballResult;
+    }
     private void stopMotors() {
         frontLeft.setPower(0);
         frontRight.setPower(0);
         backLeft.setPower(0);
         backRight.setPower(0);
+    }
+    private LLResult freshResult(int slot) {
+        LLResult r = limelight.getLatestResult();
+        // Ignore the frame or two that still come from the previous pipeline
+        if (r == null || !r.isValid() || r.getPipelineIndex() != slot) return null;
+        return r;
+    }
+    public void telemetry2(){
+        if(opmode.gamepad2.dpad_up){
+            //Cords
+
+        }
+        if(opmode.gamepad2.dpad_right){
+            //Outtake
+        }
+        if(opmode.gamepad2.dpad_down){
+            //Ballcolor
+        }
+        if(opmode.gamepad2.dpad_left){
+
+        }
     }
 }
