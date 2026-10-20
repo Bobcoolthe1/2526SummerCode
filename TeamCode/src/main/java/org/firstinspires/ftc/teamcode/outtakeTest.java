@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.motors.RevRobotics20HdHexMotor;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -9,15 +11,20 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.CRServoImplEx;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 @TeleOp(name = "Outtake Test", group = "JR")
 public class outtakeTest extends LinearOpMode {
 
     DcMotorEx outtake;
-    CRServoImplEx hoodServo;
+    CRServoImplEx outtakeMiddle;
 
     private double motorPower = 0;
     private double servoPow = 0;
@@ -28,8 +35,8 @@ public class outtakeTest extends LinearOpMode {
         outtake = hardwareMap.get(DcMotorEx.class, "O");
         outtake.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        hoodServo = hardwareMap.get(CRServoImplEx.class, "HS");
-        hoodServo.setDirection(CRServoImplEx.Direction.FORWARD);
+        outtakeMiddle = hardwareMap.get(CRServoImplEx.class, "HS");
+        outtakeMiddle.setDirection(CRServoImplEx.Direction.FORWARD);
 
         motorInitialize(outtake);
 
@@ -52,9 +59,6 @@ public class outtakeTest extends LinearOpMode {
             if(gamepad1.b){
                 motorPower = 400;
             }
-            if(gamepad1.y){
-                motorPower = 200;
-            }
             if(gamepad1.x){
                 motorPower = 100;
             }
@@ -69,7 +73,7 @@ public class outtakeTest extends LinearOpMode {
             }
 
             servoPow = Math.max(0.0, Math.min(1.0, servoPow));
-            hoodServo.setPower(servoPow);
+            outtakeMiddle.setPower(servoPow);
 
 
             motorInfo(outtake);
@@ -104,4 +108,5 @@ public class outtakeTest extends LinearOpMode {
         double degperSec = motor.getVelocity(AngleUnit.DEGREES);
         return (degperSec*(pi/180)) * radius;
     }
+
 }

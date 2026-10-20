@@ -26,8 +26,9 @@ import java.util.Deque;
 public class Master{
     private final LinearOpMode opmode;
     private final DcMotorEx frontLeft, frontRight, backLeft, backRight, outtake, intake;
-    private final CRServoImplEx outtakeMiddle, conveyorServo, outtakeLeft;
+    private final CRServoImplEx outtakeMiddle, conveyorServo, outtakeLeft, outtakeRight;
     public boolean red;
+    private boolean state = false;
     public double tag;
     GoBildaPinpointDriver OP;
     private Limelight3A limelight;
@@ -45,6 +46,7 @@ public class Master{
                       CRServoImplEx outtakeMiddle,
                       CRServoImplEx conveyorServo,
                       CRServoImplEx outtakeLeft,
+                      CRServoImplEx outtakeRight,
                       GoBildaPinpointDriver OP,
                       VoltageSensor batteryVoltage,
                       Limelight3A limelight,
@@ -61,6 +63,7 @@ public class Master{
         this.outtakeMiddle = outtakeMiddle;
         this.conveyorServo = conveyorServo;
         this.outtakeLeft = outtakeLeft;
+        this.outtakeRight = outtakeRight;
         this.OP = OP;
         this.batteryVoltage = batteryVoltage;
         this.limelight = limelight;
@@ -267,25 +270,12 @@ public class Master{
         backLeft.setPower(0);
         backRight.setPower(0);
     }
-    private LLResult freshResult(int slot) {
-        LLResult r = limelight.getLatestResult();
-        // Ignore the frame or two that still come from the previous pipeline
-        if (r == null || !r.isValid() || r.getPipelineIndex() != slot) return null;
-        return r;
-    }
     public void telemetry2(){
-        if(opmode.gamepad2.dpad_up){
-            //Cords
-
+        if(opmode.gamepad1.dpad_up){
+            state = true;
         }
-        if(opmode.gamepad2.dpad_right){
-            //Outtake
-        }
-        if(opmode.gamepad2.dpad_down){
-            //Ballcolor
-        }
-        if(opmode.gamepad2.dpad_left){
-
+        if(opmode.gamepad1.dpad_down){
+            state = false;
         }
     }
 }

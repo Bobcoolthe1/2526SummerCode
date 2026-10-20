@@ -32,10 +32,12 @@ public class Tele extends LinearOpMode {
 
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
     private DcMotorEx outtake, intake;
-    private CRServoImplEx outtakeLeft, outtakeMiddle, conveyorServo;
+    private CRServoImplEx outtakeLeft, outtakeRight, outtakeMiddle, conveyorServo;
     private Limelight3A limelight;
+    private GoBildaPinpointDriver OP;
     private VoltageSensor VS;
     private boolean red = true;
+    private boolean cycle = false;
     private double tag = 0;
     @Override
     public void runOpMode() {
@@ -75,7 +77,7 @@ public class Tele extends LinearOpMode {
         limelight.pipelineSwitch(0);
         limelight.start();
 
-        GoBildaPinpointDriver OP = hardwareMap.get(GoBildaPinpointDriver.class, "OP");
+        OP = hardwareMap.get(GoBildaPinpointDriver.class, "OP");
         OP.setOffsets(-88.6, -159.4, DistanceUnit.MM);
         OP.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
         OP.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
@@ -94,6 +96,7 @@ public class Tele extends LinearOpMode {
                 outtakeMiddle,
                 conveyorServo,
                 outtakeLeft,
+                outtakeRight,
                 OP,
                 VS,
                 limelight,
@@ -132,15 +135,34 @@ public class Tele extends LinearOpMode {
             if(gamepad1.x){
                 OP.resetPosAndIMU();
             }
-            //Intake
-            if(gamepad1.a){
-                intake.setPower(1);
+
+            //Cycle
+            if(gamepad1.left_bumper){
+                cycle = false;
             }
+            if(gamepad1.right_bumper){
+                cycle = true;
+            }
+            if(cycle){
+                master.outtake();
+                intake.setPower(1);
+                outtakeMiddle.setPower(1);
+                outtakeRight.setPower(1);
+                outtakeLeft.setPower(1);
+                conveyorServo.setPower(1);
+            }
+
             //Outtake
             if(gamepad1.b){
                 master.outtake();
             }
 
+            //Intake
+            if(gamepad1.a){
+                intake.setPower(1);
+                conveyorServo.setPower(1);
+            }
+            telemetry.update();
         }
     }
 }
