@@ -228,7 +228,7 @@ public class Master{
         motorInitialize(outtake);
         while(opmode.opModeIsActive()){
 
-            TELESUMMER.FlyWheelState FlyWheelMode = TELESUMMER.FlyWheelState.IDLE;
+            FlyWheelLoop();
 
             motorInfo(outtake);
             opmode.telemetry.addData("Wheel Speed m/s",wheelSpeed(outtake));
@@ -237,14 +237,14 @@ public class Master{
     }
     public int ballColor(){
         int ballResult = 4;
-        for (int i = 0; i < 2; i++){
+        for (int i = 0; i <= 2; i++){
             if(i == 0){
                 ballResult = 3;
             }
-            opmode.sleep(50);
             limelight.pipelineSwitch(i);
-            LLResult result = freshResult(i);
-            result = limelight.getLatestResult();
+            opmode.sleep(50);
+
+            LLResult result = limelight.getLatestResult();
             if (result != null && result.isValid()) {
                 ballResult = i;
                 break;
