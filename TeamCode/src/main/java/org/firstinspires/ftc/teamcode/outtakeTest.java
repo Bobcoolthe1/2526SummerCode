@@ -34,9 +34,10 @@ public class outtakeTest extends LinearOpMode {
 
         outtake = hardwareMap.get(DcMotorEx.class, "O");
         outtake.setDirection(DcMotorSimple.Direction.REVERSE);
+        outtake.setVelocityPIDFCoefficients(0, 0, 0.0, 20);
 
         outtakeMiddle = hardwareMap.get(CRServoImplEx.class, "HS");
-        outtakeMiddle.setDirection(CRServoImplEx.Direction.FORWARD);
+        outtakeMiddle.setDirection(CRServoImplEx.Direction.REVERSE);
 
         motorInitialize(outtake);
 
@@ -44,43 +45,22 @@ public class outtakeTest extends LinearOpMode {
 
         while (opModeIsActive()) {
             if (gamepad1.dpad_up) {
-                motorPower += 10;
+                motorPower += 50;
                 sleep(250);
             }
             if (gamepad1.dpad_down) {
-                motorPower -= 10;
+                motorPower -= 50;
                 sleep(250);
             }
-
             outtake.setVelocity(motorPower,AngleUnit.DEGREES);
-            if(gamepad1.a){
-                motorPower = 800;
-            }
-            if(gamepad1.b){
-                motorPower = 400;
-            }
-            if(gamepad1.x){
-                motorPower = 100;
-            }
 
-            if (gamepad1.dpad_right) {
-                servoPow += 0.1;
-                sleep(250);
-            }
-            if (gamepad1.dpad_left) {
-                servoPow -= 0.1;
-                sleep(250);
-            }
-
-            servoPow = Math.max(0.0, Math.min(1.0, servoPow));
-            outtakeMiddle.setPower(servoPow);
-
-
+            outtakeMiddle.setPower(1);
             motorInfo(outtake);
             telemetry.addData("getPower",outtake.getPower());
             telemetry.addData("PowerMotor",motorPower);
             telemetry.addData("PowerServo",servoPow);
             telemetry.addData("Speed",wheelSpeed(outtake));
+            telemetry.addData("vel",outtake.getVelocity());
             telemetry.update();
         }
     }

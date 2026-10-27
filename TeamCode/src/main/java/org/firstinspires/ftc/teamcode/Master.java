@@ -27,7 +27,8 @@ public class Master{
     private final LinearOpMode opmode;
     private final DcMotorEx frontLeft, frontRight, backLeft, backRight, outtake, intake;
     private final CRServoImplEx outtakeMiddle, conveyorServo, outtakeLeft, outtakeRight;
-    public boolean red;
+    private boolean red;
+    private boolean type;
     private boolean state = false;
     public double tag;
     GoBildaPinpointDriver OP;
@@ -50,6 +51,7 @@ public class Master{
                       GoBildaPinpointDriver OP,
                       VoltageSensor batteryVoltage,
                       Limelight3A limelight,
+                      boolean type,
                       boolean red,
                       double tag
     ){
@@ -67,6 +69,7 @@ public class Master{
         this.OP = OP;
         this.batteryVoltage = batteryVoltage;
         this.limelight = limelight;
+        this.type = type;
         this.red = red;
         this.tag = tag;
     }
@@ -78,7 +81,7 @@ public class Master{
 
             double heading = -op.getHeading(AngleUnit.RADIANS);
             double currentX = -op.getY(DistanceUnit.INCH);
-            double currentY = op.getX(DistanceUnit.INCH);
+            double currentY = -op.getX(DistanceUnit.INCH);
 
             double deltaX = X - currentX;
             double deltaY = Y - currentY;
@@ -92,7 +95,7 @@ public class Master{
             double robotX = dirX * cosH - dirY * sinH;
             double robotY = dirX * sinH + dirY * cosH;
 
-            powerScale = 0.0404292*distance+0.0297;
+            powerScale = 0.0404292*distance + 0.0297;
 
             if(distance >= 24){
                 powerScale = 1;
@@ -111,7 +114,7 @@ public class Master{
             double headingDegrees = -op.getHeading(AngleUnit.DEGREES);
             double error = Degrees - headingDegrees;
 
-            double turnScale = 0.008 * Math.abs(error) + 0.18;
+            double turnScale = 0.008*Math.abs(error) + 0.18;
             turnScale = Math.min(1, turnScale);
 
             double turnPower = (error < 0) ? -turnScale : turnScale;
@@ -143,16 +146,11 @@ public class Master{
             // Telemetry
             opmode.telemetry.addData("Distance", distance);
             opmode.telemetry.addData("Heading Error", error);
-            opmode.telemetry.addData("RobotX",robotX);
-            opmode.telemetry.addData("RobotY",robotY);
-            opmode.telemetry.addData("TurnPower",turnPower);
-            opmode.telemetry.addData("PowerScale",powerScale);
             opmode.telemetry.update();
-            opmode.idle();
         }
         stopMotors();
     }
-    private void motorInitialize(DcMotorEx motor){
+    public void motorInitialize(DcMotorEx motor){
         motor.setMotorType(MotorConfigurationType.getMotorType(RevRobotics20HdHexMotor.class));
         motor.setCurrentAlert(5000.0, CurrentUnit.MILLIAMPS);
         motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -161,14 +159,12 @@ public class Master{
         motor.setVelocityPIDFCoefficients(12, 0.75, 0.0, 11.7);
         motor.setTargetPositionTolerance(2);
     }
-    private void motorInfo(DcMotorEx motor){
+    public void motorInfo(DcMotorEx motor){
         double a = motor.getVelocity(AngleUnit.DEGREES);
-        double b = motor.getCurrentPosition();
-        double c = motor.getCurrent(CurrentUnit.MILLIAMPS);
+        double b = motor.getVelocity();
         opmode.telemetry.addData("Motor:", motor.getDeviceName());
         opmode.telemetry.addData("Velocity (deg/s)", a);
-        opmode.telemetry.addData("CurrentPosition", b);
-        opmode.telemetry.addData("Current (mA)", c);
+        opmode.telemetry.addData("Velocity (tick/s)", b);
     }
     private double wheelSpeed(DcMotorEx motor){
         double radius = 80;
@@ -176,66 +172,55 @@ public class Master{
         double degperSec = motor.getVelocity(AngleUnit.DEGREES);
         return (degperSec*(pi/180)) * radius;
     }
-    FlyWheelState FlyWheelMode = FlyWheelState.IDLE;
-    int ball = 4;
+    outtakeState outtakeMode = outtakeState.IDLE;
     ElapsedTime timer;
     double equation;
-    private enum FlyWheelState{
+    private enum outtakeState{
         IDLE,
         SET,
         LAUNCH,
         WAIT
     }
-    private void FlyWheelLoop() {
-        switch (FlyWheelMode) {
+    public void outtake(int[] array) {
+        switch (outtakeMode) {
             case IDLE:
                 outtake.setVelocity(0, AngleUnit.DEGREES);
                 outtakeMiddle.setPower(0);
-                ball = ballColor();
-                if(ball >= 0 && ball <=2) {
-                    FlyWheelMode = FlyWheelState.SET;
-                }
                 break;
             case SET:
-                double vel = wheelSpeed(outtake);
-                if(ball == 0){
-                    double pollenEquation = 1;
-                    equation = pollenEquation;
-                }else{
-                    double nectarEquation = 2;
-                    equation = nectarEquation;
-                }
-                outtake.setVelocity(equation, AngleUnit.DEGREES);
+                for (int i = 0; i < array.length; i++) {
+                    if (array[i] == 0) {
+                        double pollenEquation = 1000;
+                        equation = pollenEquation;
+                    } else {
+                        double nectarEquation = 1500;
+                        equation = nectarEquation;
+                    }
+                    outtake.setVelocity(equation, AngleUnit.DEGREES);
 
-                double threshold = 10; // Increased threshold for stability
-                double error = Math.abs(equation - vel);
+                    double vel = outtake.getVelocity(AngleUnit.DEGREES);
+                    double threshold = 10; // Increased threshold for stability
+                    double error = Math.abs(equation - vel);
 
-                if (error < threshold) {
-                    FlyWheelMode = FlyWheelState.LAUNCH;
+                    if (error < threshold) {
+                        outtakeMode = outtakeState.LAUNCH;
+                    }
                 }
+                outtakeMode = outtakeState.IDLE;
                 break;
             case LAUNCH:
                 outtakeMiddle.setPower(1);
+                conveyorServo.setPower(1);
                 timer.reset();
-                FlyWheelMode = FlyWheelState.WAIT;
+                outtakeMode = outtakeState.WAIT;
                 break;
             case WAIT:
                 if(timer.milliseconds() > 300){
                     outtakeMiddle.setPower(0);
-                    FlyWheelMode = FlyWheelState.IDLE;
+                    conveyorServo.setPower(0);
+                    outtakeMode = outtakeState.SET;
                 }
                 break;
-        }
-    }
-    public void outtake(){
-        motorInitialize(outtake);
-        while(opmode.opModeIsActive()){
-
-            FlyWheelLoop();
-
-            motorInfo(outtake);
-            opmode.telemetry.addData("Wheel Speed m/s",wheelSpeed(outtake));
-            opmode.telemetry.update();
         }
     }
     public int ballColor(){
@@ -269,13 +254,5 @@ public class Master{
         frontRight.setPower(0);
         backLeft.setPower(0);
         backRight.setPower(0);
-    }
-    public void telemetry2(){
-        if(opmode.gamepad1.dpad_up){
-            state = true;
-        }
-        if(opmode.gamepad1.dpad_down){
-            state = false;
-        }
     }
 }

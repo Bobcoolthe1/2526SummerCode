@@ -28,7 +28,7 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 @TeleOp(name = "Tele")
-public class Tele extends LinearOpMode {
+public class TeleV1 extends LinearOpMode {
 
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
     private DcMotorEx outtake, intake;
@@ -37,53 +37,20 @@ public class Tele extends LinearOpMode {
     private GoBildaPinpointDriver OP;
     private VoltageSensor VS;
     private boolean red = true;
-    private boolean cycle = false;
+    private boolean type = true;
+    //type - true = pollen
+    //type - false = nectar
     private double tag = 0;
+    private boolean intakeOn = false;
+    private boolean lastButton1 = false;
+    private boolean outtakeOn = false;
+    private boolean lastButton2 = false;
+    private double outtakeVel = 0;
+    private boolean outtakecolorOn = false;
+    private boolean lastButton3 = false;
+
     @Override
     public void runOpMode() {
-
-        frontLeft = hardwareMap.get(DcMotorEx.class, "FL");
-        frontRight = hardwareMap.get(DcMotorEx.class, "FL");
-        backLeft = hardwareMap.get(DcMotorEx.class, "FL");
-        backRight = hardwareMap.get(DcMotorEx.class, "FL");
-        frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        backLeft.setDirection(DcMotor.Direction.REVERSE);
-
-        outtake = hardwareMap.get(DcMotorEx.class, "O");
-        outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        outtake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        outtake.setVelocityPIDFCoefficients(20, 0, 5, 32767/13620);
-
-        intake = hardwareMap.get(DcMotorEx.class, "I");
-        intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        intake.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        intake.setVelocityPIDFCoefficients(20, 0, 5, 32767/13620);
-        /*
-        Increase P - If take to long to reach speed
-        Decrease P - If it oscillates
-        Increase D - If it overshoots
-         */
-
-        outtakeMiddle = hardwareMap.get(CRServoImplEx.class,"OM");
-        outtakeMiddle.setDirection(CRServo.Direction.FORWARD);
-        outtakeLeft = hardwareMap.get(CRServoImplEx.class,"OL");
-        outtakeLeft.setDirection(CRServo.Direction.FORWARD);
-        conveyorServo = hardwareMap.get(CRServoImplEx.class,"CS");
-        conveyorServo.setDirection(CRServo.Direction.FORWARD);
-
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
-        limelight.start();
-
-        OP = hardwareMap.get(GoBildaPinpointDriver.class, "OP");
-        OP.setOffsets(-88.6, -159.4, DistanceUnit.MM);
-        OP.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-        OP.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
-        OP.resetPosAndIMU();
-
-        VS = hardwareMap.voltageSensor.iterator().next();
 
         Master master = new Master(
                 this,
@@ -100,13 +67,60 @@ public class Tele extends LinearOpMode {
                 OP,
                 VS,
                 limelight,
+                type,
                 red,
                 tag
         );
 
+        frontLeft = hardwareMap.get(DcMotorEx.class, "FL");
+        frontRight = hardwareMap.get(DcMotorEx.class, "FR");
+        backLeft = hardwareMap.get(DcMotorEx.class, "BL");
+        backRight = hardwareMap.get(DcMotorEx.class, "BR");
+        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        outtake = hardwareMap.get(DcMotorEx.class, "O");
+        outtake.setDirection(DcMotorSimple.Direction.REVERSE);
+        master.motorInitialize(outtake);
+        outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        intake = hardwareMap.get(DcMotorEx.class, "I");
+        intake.setDirection(DcMotorSimple.Direction.REVERSE);
+        intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
+        /*
+        Increase P - If take to long to reach speed
+        Decrease P - If it oscillates
+        Increase D - If it overshoots
+         */
+
+        outtakeMiddle = hardwareMap.get(CRServoImplEx.class,"OM");
+        outtakeMiddle.setDirection(CRServo.Direction.REVERSE);
+        outtakeLeft = hardwareMap.get(CRServoImplEx.class,"OL");
+        outtakeLeft.setDirection(CRServo.Direction.FORWARD);
+        outtakeRight = hardwareMap.get(CRServoImplEx.class,"OR");
+        outtakeRight.setDirection(CRServo.Direction.FORWARD);
+        conveyorServo = hardwareMap.get(CRServoImplEx.class,"CS");
+        conveyorServo.setDirection(CRServo.Direction.REVERSE);
+
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.pipelineSwitch(0);
+        limelight.start();
+
+        OP = hardwareMap.get(GoBildaPinpointDriver.class, "OP");
+        OP.setOffsets(-88.6, -159.4, DistanceUnit.MM);
+        OP.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        OP.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        OP.resetPosAndIMU();
+
+        VS = hardwareMap.voltageSensor.iterator().next();
+
         waitForStart();
 
         while (opModeIsActive()) {
+            OP.update();
+            Pose2D op = OP.getPosition();
 
             double y  = -gamepad1.left_stick_y;
             double x  = gamepad1.left_stick_x;
@@ -129,39 +143,66 @@ public class Tele extends LinearOpMode {
             backRight.setPower(backRightPower / max);
 
             //Movement
-            if(gamepad1.dpad_down){
+            if(gamepad1.dpad_left){
                 master.cords(0,0,0);
+            }
+            if(gamepad1.dpad_right){
+                master.cords(10,10,0);
             }
             if(gamepad1.x){
                 OP.resetPosAndIMU();
             }
 
-            //Cycle
-            if(gamepad1.left_bumper){
-                cycle = false;
-            }
-            if(gamepad1.right_bumper){
-                cycle = true;
-            }
-            if(cycle){
-                master.outtake();
-                intake.setPower(1);
-                outtakeMiddle.setPower(1);
-                outtakeRight.setPower(1);
-                outtakeLeft.setPower(1);
-                conveyorServo.setPower(1);
-            }
-
             //Outtake
-            if(gamepad1.b){
-                master.outtake();
+            if(gamepad1.dpad_left){
+                //Pollen
+                outtake.setVelocity(1500,AngleUnit.DEGREES);
+            }
+            if(gamepad1.dpad_right){
+                //Nectar
+                outtake.setVelocity(1000,AngleUnit.DEGREES);
+            }
+            if (gamepad1.b && !lastButton2) {
+                outtakeOn = !outtakeOn;
+            }
+            lastButton2 = gamepad2.b;
+            if (outtakeOn) {
+                outtakeMiddle.setPower(0.5);
+            } else {
+                outtakeMiddle.setPower(0);
             }
 
             //Intake
-            if(gamepad1.a){
-                intake.setPower(1);
-                conveyorServo.setPower(1);
+            if (gamepad1.a && !lastButton1) {
+                intakeOn = !intakeOn;
             }
+            lastButton1 = gamepad1.a;
+            if (intakeOn) {
+                intake.setPower(1.0);
+            } else {
+                intake.setPower(0.0);
+            }
+
+            // conveyorServo
+            if (intakeOn || outtakeOn) {
+                conveyorServo.setPower(1);
+            } else {
+                conveyorServo.setPower(0);
+            }
+
+            //Intake Reverse
+            if(gamepad1.left_trigger > 0.5){
+                intake.setPower(-0.5);
+            }
+            if(gamepad1.right_trigger > 0.5){
+                intake.setPower(0);
+            }
+
+            OP.update();
+            telemetry.addData("setVel",outtakeVel);
+            telemetry.addData("X", -op.getY(DistanceUnit.INCH));
+            telemetry.addData("Y", -op.getX(DistanceUnit.INCH));
+            master.motorInfo(outtake);
             telemetry.update();
         }
     }

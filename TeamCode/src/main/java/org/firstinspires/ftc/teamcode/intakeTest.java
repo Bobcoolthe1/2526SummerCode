@@ -17,7 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 public class intakeTest extends LinearOpMode {
 
     DcMotorEx intake;
-    CRServoImplEx storgeIntake;
+    CRServoImplEx conveyServo;
 
     private double power = 0.0;
     @Override
@@ -26,7 +26,9 @@ public class intakeTest extends LinearOpMode {
         intake = hardwareMap.get(DcMotorEx.class, "I");
         intake.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        storgeIntake = hardwareMap.get(CRServoImplEx.class,"SI");
+        conveyServo = hardwareMap.get(CRServoImplEx.class,"CS");
+        conveyServo.setDirection(DcMotorSimple.Direction.REVERSE);
+
 
         waitForStart();
 
@@ -39,10 +41,13 @@ public class intakeTest extends LinearOpMode {
                 power -= 0.1;
                 sleep(250);
             }
+            if(gamepad1.x){
+                power = 0;
+            }
 
             power = Math.max(-1.0, Math.min(1.0, power));
             intake.setPower(power);
-            storgeIntake.setPower(power);
+            conveyServo.setPower(power);
 
             telemetry.addData("Intake Power (servo/motor)", power);
             telemetry.update();
