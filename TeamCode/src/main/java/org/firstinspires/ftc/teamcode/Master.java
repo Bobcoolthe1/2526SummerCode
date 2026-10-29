@@ -25,8 +25,8 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 public class Master{
     private final LinearOpMode opmode;
-    private final DcMotorEx frontLeft, frontRight, backLeft, backRight, outtake, intake;
-    private final CRServoImplEx outtakeMiddle, conveyorServo, outtakeLeft, outtakeRight;
+    private final DcMotorEx frontLeft, frontRight, backLeft, backRight, outtake, intake, conveyor;
+    private final CRServoImplEx outtakeMiddle, outtakeLeft, outtakeRight;
     private boolean red;
     private boolean type;
     private boolean state = false;
@@ -45,7 +45,7 @@ public class Master{
                       DcMotorEx outtake,
                       DcMotorEx intake,
                       CRServoImplEx outtakeMiddle,
-                      CRServoImplEx conveyorServo,
+                      DcMotorEx conveyor,
                       CRServoImplEx outtakeLeft,
                       CRServoImplEx outtakeRight,
                       GoBildaPinpointDriver OP,
@@ -63,7 +63,7 @@ public class Master{
         this.outtake = outtake;
         this.intake = intake;
         this.outtakeMiddle = outtakeMiddle;
-        this.conveyorServo = conveyorServo;
+        this.conveyor = conveyor;
         this.outtakeLeft = outtakeLeft;
         this.outtakeRight = outtakeRight;
         this.OP = OP;
@@ -166,61 +166,29 @@ public class Master{
         opmode.telemetry.addData("Velocity (deg/s)", a);
         opmode.telemetry.addData("Velocity (tick/s)", b);
     }
-    private double wheelSpeed(DcMotorEx motor){
-        double radius = 80;
-        double pi = 3.1415;
-        double degperSec = motor.getVelocity(AngleUnit.DEGREES);
-        return (degperSec*(pi/180)) * radius;
-    }
-    outtakeState outtakeMode = outtakeState.IDLE;
-    ElapsedTime timer;
     double equation;
-    private enum outtakeState{
-        IDLE,
-        SET,
-        LAUNCH,
-        WAIT
-    }
     public void outtake(int[] array) {
-        switch (outtakeMode) {
-            case IDLE:
-                outtake.setVelocity(0, AngleUnit.DEGREES);
-                outtakeMiddle.setPower(0);
-                break;
-            case SET:
-                for (int i = 0; i < array.length; i++) {
-                    if (array[i] == 0) {
-                        double pollenEquation = 1000;
-                        equation = pollenEquation;
-                    } else {
-                        double nectarEquation = 1500;
-                        equation = nectarEquation;
-                    }
-                    outtake.setVelocity(equation, AngleUnit.DEGREES);
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] == 0) {
+                double pollenEquation = 1000;
+                equation = pollenEquation;
+            } else {
+                double nectarEquation = 1500;
+                equation = nectarEquation;
+            }
+            outtake.setVelocity(equation, AngleUnit.DEGREES);
 
-                    double vel = outtake.getVelocity(AngleUnit.DEGREES);
-                    double threshold = 10; // Increased threshold for stability
-                    double error = Math.abs(equation - vel);
+            double vel = outtake.getVelocity(AngleUnit.DEGREES);
+            double threshold = 10; // Increased threshold for stability
+            double error = Math.abs(equation - vel);
 
-                    if (error < threshold) {
-                        outtakeMode = outtakeState.LAUNCH;
-                    }
-                }
-                outtakeMode = outtakeState.IDLE;
-                break;
-            case LAUNCH:
+            if (error < threshold) {
                 outtakeMiddle.setPower(1);
-                conveyorServo.setPower(1);
-                timer.reset();
-                outtakeMode = outtakeState.WAIT;
-                break;
-            case WAIT:
-                if(timer.milliseconds() > 300){
-                    outtakeMiddle.setPower(0);
-                    conveyorServo.setPower(0);
-                    outtakeMode = outtakeState.SET;
-                }
-                break;
+                conveyor.setPower(1);
+                opmode.sleep(500);
+                outtakeMiddle.setPower(0);
+                conveyor.setPower(0);
+            }
         }
     }
     public int ballColor(){
@@ -254,5 +222,9 @@ public class Master{
         frontRight.setPower(0);
         backLeft.setPower(0);
         backRight.setPower(0);
+    }
+    public void locChange(double x, double y, double heading){
+        Pose2D start = new Pose2D(DistanceUnit.INCH,-y,-x,AngleUnit.DEGREES,heading);
+        OP.setPosition(start);
     }
 }

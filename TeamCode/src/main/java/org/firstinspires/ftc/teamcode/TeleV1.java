@@ -27,12 +27,12 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
-@TeleOp(name = "Tele")
+@TeleOp(name = "Tele",group = "Main")
 public class TeleV1 extends LinearOpMode {
 
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
-    private DcMotorEx outtake, intake;
-    private CRServoImplEx outtakeLeft, outtakeRight, outtakeMiddle, conveyorServo;
+    private DcMotorEx outtake, intake, conveyor;
+    private CRServoImplEx outtakeLeft, outtakeRight, outtakeMiddle;
     private Limelight3A limelight;
     private GoBildaPinpointDriver OP;
     private VoltageSensor VS;
@@ -61,7 +61,7 @@ public class TeleV1 extends LinearOpMode {
                 outtake,
                 intake,
                 outtakeMiddle,
-                conveyorServo,
+                conveyor,
                 outtakeLeft,
                 outtakeRight,
                 OP,
@@ -101,8 +101,8 @@ public class TeleV1 extends LinearOpMode {
         outtakeLeft.setDirection(CRServo.Direction.FORWARD);
         outtakeRight = hardwareMap.get(CRServoImplEx.class,"OR");
         outtakeRight.setDirection(CRServo.Direction.FORWARD);
-        conveyorServo = hardwareMap.get(CRServoImplEx.class,"CS");
-        conveyorServo.setDirection(CRServo.Direction.REVERSE);
+        conveyor = hardwareMap.get(DcMotorEx.class,"CS");
+        conveyor.setDirection(CRServo.Direction.REVERSE);
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
@@ -143,10 +143,10 @@ public class TeleV1 extends LinearOpMode {
             backRight.setPower(backRightPower / max);
 
             //Movement
-            if(gamepad1.dpad_left){
+            if(gamepad1.dpad_up){
                 master.cords(0,0,0);
             }
-            if(gamepad1.dpad_right){
+            if(gamepad1.dpad_down){
                 master.cords(10,10,0);
             }
             if(gamepad1.x){
@@ -156,46 +156,56 @@ public class TeleV1 extends LinearOpMode {
             //Outtake
             if(gamepad1.dpad_left){
                 //Pollen
-                outtake.setVelocity(1500,AngleUnit.DEGREES);
+                outtake.setVelocity(1450,AngleUnit.DEGREES);
             }
             if(gamepad1.dpad_right){
                 //Nectar
-                outtake.setVelocity(1000,AngleUnit.DEGREES);
+                outtake.setVelocity(1600,AngleUnit.DEGREES);
             }
             if (gamepad1.b && !lastButton2) {
                 outtakeOn = !outtakeOn;
             }
             lastButton2 = gamepad2.b;
-            if (outtakeOn) {
-                outtakeMiddle.setPower(0.5);
-            } else {
-                outtakeMiddle.setPower(0);
-            }
 
             //Intake
             if (gamepad1.a && !lastButton1) {
                 intakeOn = !intakeOn;
             }
             lastButton1 = gamepad1.a;
-            if (intakeOn) {
-                intake.setPower(1.0);
-            } else {
-                intake.setPower(0.0);
-            }
 
-            // conveyorServo
+            //Conveyor Control
             if (intakeOn || outtakeOn) {
-                conveyorServo.setPower(1);
+                conveyor.setPower(1);
             } else {
-                conveyorServo.setPower(0);
+                conveyor.setPower(0);
             }
 
-            //Intake Reverse
-            if(gamepad1.left_trigger > 0.5){
-                intake.setPower(-0.5);
+            //Outtake Middle Control
+            if(intakeOn && outtakeOn){
+                outtakeMiddle.setPower(1);
             }
-            if(gamepad1.right_trigger > 0.5){
+            if(!intakeOn && !outtakeOn){
+                outtakeMiddle.setPower(0);
+            }
+            if(!intakeOn && outtakeOn){
+                outtakeMiddle.setPower(1);
+            }
+            if(intakeOn && !outtakeOn){
+                outtakeMiddle.setPower(-1);
+            }
+
+            //Intake Motor Control
+            if(intakeOn && outtakeOn){
                 intake.setPower(0);
+            }
+            if(!intakeOn && !outtakeOn){
+                intake.setPower(0);
+            }
+            if(!intakeOn && outtakeOn){
+                intake.setPower(0);
+            }
+            if(intakeOn && !outtakeOn){
+                intake.setPower(1);
             }
 
             OP.update();

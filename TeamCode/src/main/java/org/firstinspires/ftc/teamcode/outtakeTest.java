@@ -20,14 +20,14 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
-@TeleOp(name = "Outtake Test", group = "JR")
+@TeleOp(name = "Outtake Test", group = "Test")
 public class outtakeTest extends LinearOpMode {
 
-    DcMotorEx outtake;
+    DcMotorEx outtake,conveyor;
     CRServoImplEx outtakeMiddle;
 
-    private double motorPower = 0;
-    private double servoPow = 0;
+
+    private double motorPower = 1500;
 
     @Override
     public void runOpMode() {
@@ -35,6 +35,9 @@ public class outtakeTest extends LinearOpMode {
         outtake = hardwareMap.get(DcMotorEx.class, "O");
         outtake.setDirection(DcMotorSimple.Direction.REVERSE);
         outtake.setVelocityPIDFCoefficients(0, 0, 0.0, 20);
+
+        conveyor = hardwareMap.get(DcMotorEx.class, "CS");
+        conveyor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         outtakeMiddle = hardwareMap.get(CRServoImplEx.class, "HS");
         outtakeMiddle.setDirection(CRServoImplEx.Direction.REVERSE);
@@ -45,22 +48,20 @@ public class outtakeTest extends LinearOpMode {
 
         while (opModeIsActive()) {
             if (gamepad1.dpad_up) {
-                motorPower += 50;
+                motorPower += 10;
                 sleep(250);
             }
             if (gamepad1.dpad_down) {
-                motorPower -= 50;
+                motorPower -= 10;
                 sleep(250);
             }
             outtake.setVelocity(motorPower,AngleUnit.DEGREES);
 
             outtakeMiddle.setPower(1);
-            motorInfo(outtake);
-            telemetry.addData("getPower",outtake.getPower());
-            telemetry.addData("PowerMotor",motorPower);
-            telemetry.addData("PowerServo",servoPow);
-            telemetry.addData("Speed",wheelSpeed(outtake));
-            telemetry.addData("vel",outtake.getVelocity());
+            conveyor.setPower(1);
+
+            telemetry.addData("setVel",motorPower);
+            telemetry.addData("vel",outtake.getVelocity(AngleUnit.DEGREES));
             telemetry.update();
         }
     }

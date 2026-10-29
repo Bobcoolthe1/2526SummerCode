@@ -14,7 +14,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
-@TeleOp(name = "DONT USE")
+@TeleOp(name = "DONT USE",group = "Bad")
 public class TELESUMMER extends LinearOpMode {
     private GoBildaPinpointDriver OP;
     ElapsedTime timer = new ElapsedTime();

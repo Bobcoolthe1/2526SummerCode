@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -27,12 +28,12 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
-@TeleOp(name = "AutoRedV1")
+@Autonomous(name = "AutoRedV1")
 public class AutoRedV1 extends LinearOpMode {
 
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
-    private DcMotorEx outtake, intake;
-    private CRServoImplEx outtakeLeft, outtakeRight, outtakeMiddle, conveyorServo;
+    private DcMotorEx outtake, intake, conveyor;
+    private CRServoImplEx outtakeLeft, outtakeRight, outtakeMiddle;
     private Limelight3A limelight;
     private GoBildaPinpointDriver OP;
     private VoltageSensor VS;
@@ -53,7 +54,7 @@ public class AutoRedV1 extends LinearOpMode {
                 outtake,
                 intake,
                 outtakeMiddle,
-                conveyorServo,
+                conveyor,
                 outtakeLeft,
                 outtakeRight,
                 OP,
@@ -93,9 +94,8 @@ public class AutoRedV1 extends LinearOpMode {
         outtakeLeft.setDirection(CRServo.Direction.FORWARD);
         outtakeRight = hardwareMap.get(CRServoImplEx.class,"OR");
         outtakeRight.setDirection(CRServo.Direction.FORWARD);
-        conveyorServo = hardwareMap.get(CRServoImplEx.class,"CS");
-        conveyorServo.setDirection(CRServo.Direction.REVERSE);
-
+        conveyor = hardwareMap.get(DcMotorEx.class,"CS");
+        conveyor.setDirection(CRServo.Direction.REVERSE);
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
         limelight.start();
@@ -111,7 +111,11 @@ public class AutoRedV1 extends LinearOpMode {
         waitForStart();
 
         if (opModeIsActive()) {
-
+            master.locChange(-12,8,0);
+            master.outtake(new int[]{0, 0, 0, 0});
+            master.cords(-12,30,0);
+            master.cords(-48,35,0);
+            master.cords(-60,108,0);
         }
     }
 }
