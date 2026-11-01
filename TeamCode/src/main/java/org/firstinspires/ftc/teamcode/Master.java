@@ -31,6 +31,7 @@ public class Master{
     private boolean type;
     private boolean state = false;
     public double tag;
+    private double pollenEquation, nectarEquation;
     GoBildaPinpointDriver OP;
     private Limelight3A limelight;
     VoltageSensor batteryVoltage;
@@ -53,7 +54,9 @@ public class Master{
                       Limelight3A limelight,
                       boolean type,
                       boolean red,
-                      double tag
+                      double tag,
+                      double pollenEquation,
+                      double nectarEquation
     ){
         this.opmode = opmode;
         this.frontLeft = frontLeft;
@@ -72,6 +75,20 @@ public class Master{
         this.type = type;
         this.red = red;
         this.tag = tag;
+        this.pollenEquation = pollenEquation;
+        this.nectarEquation = nectarEquation;
+    }
+    public void setPollenEquation(double value) {
+        this.pollenEquation = value;
+    }
+    public void setNectarEquation(double value) {
+        this.nectarEquation = value;
+    }
+    public double getPollenEquation() {
+        return pollenEquation;
+    }
+    public double getNectarEquation() {
+        return nectarEquation;
     }
     public void cords(double X, double Y, double Degrees) {
         double powerScale;
@@ -153,7 +170,6 @@ public class Master{
     public void motorInitialize(DcMotorEx motor){
         motor.setMotorType(MotorConfigurationType.getMotorType(RevRobotics20HdHexMotor.class));
         motor.setCurrentAlert(5000.0, CurrentUnit.MILLIAMPS);
-        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         // P=15 (Aggressive response), I=3 (Correction), D=0, F=11.7 (Calculated for REV HD Hex)
         motor.setVelocityPIDFCoefficients(12, 0.75, 0.0, 11.7);
@@ -167,27 +183,37 @@ public class Master{
         opmode.telemetry.addData("Velocity (tick/s)", b);
     }
     double equation;
+    long sleep;
     public void outtake(int[] array) {
         for (int i = 0; i < array.length; i++) {
-            if (array[i] == 0) {
-                double pollenEquation = 1000;
-                equation = pollenEquation;
-            } else {
-                double nectarEquation = 1500;
-                equation = nectarEquation;
-            }
-            outtake.setVelocity(equation, AngleUnit.DEGREES);
 
-            double vel = outtake.getVelocity(AngleUnit.DEGREES);
-            double threshold = 10; // Increased threshold for stability
-            double error = Math.abs(equation - vel);
+            equation = (array[i] == 0) ? pollenEquation : nectarEquation;
+            outtake.setVelocity(equation);
 
-            if (error < threshold) {
-                outtakeMiddle.setPower(1);
-                conveyor.setPower(1);
-                opmode.sleep(500);
-                outtakeMiddle.setPower(0);
-                conveyor.setPower(0);
+            while(opmode.opModeIsActive()) {
+
+                double vel = outtake.getVelocity();
+                double threshold = 15; // Increased threshold for stability
+                double error = Math.abs(equation - vel);
+
+                if (error < threshold) {
+                    outtakeMiddle.setPower(1);
+                    conveyor.setPower(1);
+                    opmode.telemetry.addLine("Outtaking");
+                    sleep = (array[i] == 0) ? 450 : 300;
+                    opmode.sleep(sleep);
+                    outtake.setVelocity(0);
+                    outtakeMiddle.setPower(0);
+                    conveyor.setPower(0);
+                    break;
+                }
+                if(opmode.gamepad2.x){
+                    break;
+                }
+                opmode.telemetry.addData("Target",equation);
+                opmode.telemetry.addData("Current",vel);
+                opmode.telemetry.addData("Error",error);
+                opmode.telemetry.update();
             }
         }
     }

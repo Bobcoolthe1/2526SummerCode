@@ -42,28 +42,11 @@ public class AutoRedV1 extends LinearOpMode {
     //type - true = pollen
     //type - false = nectar
     private double tag = 0;
+    private double pollenEquation = 2000;
+    private double nectarEquation = 1800;
 
     @Override
     public void runOpMode() {
-        Master master = new Master(
-                this,
-                frontLeft,
-                frontRight,
-                backLeft,
-                backRight,
-                outtake,
-                intake,
-                outtakeMiddle,
-                conveyor,
-                outtakeLeft,
-                outtakeRight,
-                OP,
-                VS,
-                limelight,
-                type,
-                red,
-                tag
-        );
 
         frontLeft = hardwareMap.get(DcMotorEx.class, "FL");
         frontRight = hardwareMap.get(DcMotorEx.class, "FR");
@@ -75,7 +58,8 @@ public class AutoRedV1 extends LinearOpMode {
 
         outtake = hardwareMap.get(DcMotorEx.class, "O");
         outtake.setDirection(DcMotorSimple.Direction.REVERSE);
-        master.motorInitialize(outtake);
+        outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        // P=15 (Aggressive response), I=3 (Correction), D=0, F=11.7 (Calculated for REV HD Hex)
         outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         intake = hardwareMap.get(DcMotorEx.class, "I");
@@ -96,6 +80,7 @@ public class AutoRedV1 extends LinearOpMode {
         outtakeRight.setDirection(CRServo.Direction.FORWARD);
         conveyor = hardwareMap.get(DcMotorEx.class,"CS");
         conveyor.setDirection(CRServo.Direction.REVERSE);
+
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0);
         limelight.start();
@@ -107,6 +92,28 @@ public class AutoRedV1 extends LinearOpMode {
         OP.resetPosAndIMU();
 
         VS = hardwareMap.voltageSensor.iterator().next();
+
+        Master master = new Master(
+                this,
+                frontLeft,
+                frontRight,
+                backLeft,
+                backRight,
+                outtake,
+                intake,
+                outtakeMiddle,
+                conveyor,
+                outtakeLeft,
+                outtakeRight,
+                OP,
+                VS,
+                limelight,
+                type,
+                red,
+                tag,
+                pollenEquation,
+                nectarEquation
+        );
 
         waitForStart();
 

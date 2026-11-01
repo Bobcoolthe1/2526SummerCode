@@ -26,7 +26,6 @@ public class outtakeTest extends LinearOpMode {
     DcMotorEx outtake,conveyor;
     CRServoImplEx outtakeMiddle;
 
-
     private double motorPower = 1500;
 
     @Override
@@ -34,15 +33,19 @@ public class outtakeTest extends LinearOpMode {
 
         outtake = hardwareMap.get(DcMotorEx.class, "O");
         outtake.setDirection(DcMotorSimple.Direction.REVERSE);
-        outtake.setVelocityPIDFCoefficients(0, 0, 0.0, 20);
+        outtake.setMotorType(MotorConfigurationType.getMotorType(RevRobotics20HdHexMotor.class));
+        outtake.setCurrentAlert(5000.0, CurrentUnit.MILLIAMPS);
+        outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        // P=15 (Aggressive response), I=3 (Correction), D=0, F=11.7 (Calculated for REV HD Hex)
+        outtake.setVelocityPIDFCoefficients(12, 0.75, 0.0, 11.7);
+        outtake.setTargetPositionTolerance(2);
 
         conveyor = hardwareMap.get(DcMotorEx.class, "CS");
         conveyor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         outtakeMiddle = hardwareMap.get(CRServoImplEx.class, "HS");
         outtakeMiddle.setDirection(CRServoImplEx.Direction.REVERSE);
-
-        motorInitialize(outtake);
 
         waitForStart();
 
@@ -61,33 +64,14 @@ public class outtakeTest extends LinearOpMode {
             conveyor.setPower(1);
 
             telemetry.addData("setVel",motorPower);
-            telemetry.addData("vel",outtake.getVelocity(AngleUnit.DEGREES));
+
+            double a = outtake.getVelocity(AngleUnit.DEGREES);
+            double b = outtake.getVelocity();
+            telemetry.addData("Motor:", outtake.getDeviceName());
+            telemetry.addData("Velocity (deg/s)", a);
+            telemetry.addData("Velocity (tick/s)", b);
+
             telemetry.update();
         }
     }
-    private void motorInitialize(DcMotorEx motor){
-        motor.setMotorType(MotorConfigurationType.getMotorType(RevRobotics20HdHexMotor.class));
-        motor.setCurrentAlert(5000.0, CurrentUnit.MILLIAMPS);
-        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        // P=15 (Aggressive response), I=3 (Correction), D=0, F=11.7 (Calculated for REV HD Hex)
-        motor.setVelocityPIDFCoefficients(12, 0.75, 0.0, 6.4);
-        motor.setTargetPositionTolerance(2);
-    }
-    private void motorInfo(DcMotorEx motor){
-        double a = motor.getVelocity(AngleUnit.DEGREES);
-        double b = motor.getCurrentPosition();
-        double c = motor.getCurrent(CurrentUnit.MILLIAMPS);
-        telemetry.addData("Motor:", motor.getDeviceName());
-        telemetry.addData("Velocity (deg/s)", a);
-        telemetry.addData("CurrentPosition", b);
-        telemetry.addData("Current (mA)", c);
-    }
-    private double wheelSpeed(DcMotorEx motor){
-        double radius = 0.08;
-        double pi = 3.1415;
-        double degperSec = motor.getVelocity(AngleUnit.DEGREES);
-        return (degperSec*(pi/180)) * radius;
-    }
-
 }

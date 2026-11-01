@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.hardware.motors.GoBILDA5201Series;
+import com.qualcomm.hardware.motors.RevRobotics20HdHexMotor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -15,6 +17,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.CRServoImplEx;
 import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.hardware.ServoImpl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -27,7 +30,7 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
-@TeleOp(name = "Tele",group = "Main")
+@TeleOp(name = "Tele",group = "1")
 public class TeleV1 extends LinearOpMode {
 
     private DcMotorEx frontLeft, frontRight, backLeft, backRight;
@@ -45,32 +48,12 @@ public class TeleV1 extends LinearOpMode {
     private boolean lastButton1 = false;
     private boolean outtakeOn = false;
     private boolean lastButton2 = false;
-    private double outtakeVel = 0;
-    private boolean outtakecolorOn = false;
-    private boolean lastButton3 = false;
+
+    private double pollenEquation = 2000;
+    private double nectarEquation = 1810;
 
     @Override
     public void runOpMode() {
-
-        Master master = new Master(
-                this,
-                frontLeft,
-                frontRight,
-                backLeft,
-                backRight,
-                outtake,
-                intake,
-                outtakeMiddle,
-                conveyor,
-                outtakeLeft,
-                outtakeRight,
-                OP,
-                VS,
-                limelight,
-                type,
-                red,
-                tag
-        );
 
         frontLeft = hardwareMap.get(DcMotorEx.class, "FL");
         frontRight = hardwareMap.get(DcMotorEx.class, "FR");
@@ -79,10 +62,15 @@ public class TeleV1 extends LinearOpMode {
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         outtake = hardwareMap.get(DcMotorEx.class, "O");
         outtake.setDirection(DcMotorSimple.Direction.REVERSE);
-        master.motorInitialize(outtake);
+        outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        // P=15 (Aggressive response), I=3 (Correction), D=0, F=11.7 (Calculated for REV HD Hex)
         outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         intake = hardwareMap.get(DcMotorEx.class, "I");
@@ -116,15 +104,35 @@ public class TeleV1 extends LinearOpMode {
 
         VS = hardwareMap.voltageSensor.iterator().next();
 
+        Master master = new Master(
+                this,
+                frontLeft,
+                frontRight,
+                backLeft,
+                backRight,
+                outtake,
+                intake,
+                outtakeMiddle,
+                conveyor,
+                outtakeLeft,
+                outtakeRight,
+                OP,
+                VS,
+                limelight,
+                type,
+                red,
+                tag,
+                pollenEquation,
+                nectarEquation
+        );
+
         waitForStart();
 
         while (opModeIsActive()) {
-            OP.update();
-            Pose2D op = OP.getPosition();
 
-            double y  = -gamepad1.left_stick_y;
-            double x  = gamepad1.left_stick_x;
-            double rx = gamepad1.right_stick_x;
+            double y  = -gamepad1.right_stick_y;
+            double x  = gamepad1.right_stick_x;
+            double rx = gamepad1.left_stick_x;
 
             double frontLeftPower  = y + x + rx;
             double backLeftPower   = y - x + rx;
@@ -142,30 +150,19 @@ public class TeleV1 extends LinearOpMode {
             frontRight.setPower(frontRightPower / max);
             backRight.setPower(backRightPower / max);
 
-            //Movement
-            if(gamepad1.dpad_up){
-                master.cords(0,0,0);
-            }
-            if(gamepad1.dpad_down){
-                master.cords(10,10,0);
-            }
-            if(gamepad1.x){
-                OP.resetPosAndIMU();
-            }
-
             //Outtake
             if(gamepad1.dpad_left){
                 //Pollen
-                outtake.setVelocity(1450,AngleUnit.DEGREES);
+                master.outtake(new int[]{0});
             }
             if(gamepad1.dpad_right){
                 //Nectar
-                outtake.setVelocity(1600,AngleUnit.DEGREES);
+                master.outtake(new int[]{1});
             }
             if (gamepad1.b && !lastButton2) {
                 outtakeOn = !outtakeOn;
             }
-            lastButton2 = gamepad2.b;
+            lastButton2 = gamepad1.b;
 
             //Intake
             if (gamepad1.a && !lastButton1) {
@@ -173,46 +170,73 @@ public class TeleV1 extends LinearOpMode {
             }
             lastButton1 = gamepad1.a;
 
-            //Conveyor Control
-            if (intakeOn || outtakeOn) {
-                conveyor.setPower(1);
+            boolean reverseFeed = gamepad1.right_trigger > 0.2;
+            if (reverseFeed) {
+                outtake.setPower(-0.4);
+                outtakeMiddle.setPower(-0.75);
+                conveyor.setPower(-1);
+                intake.setPower(-1);
             } else {
-                conveyor.setPower(0);
+                outtake.setPower(0);
+
+                //Conveyor Control
+                if (intakeOn || outtakeOn) {
+                    conveyor.setPower(1);
+                } else {
+                    conveyor.setPower(0.5);
+                }
+
+                //Outtake Middle Control
+                if(intakeOn && outtakeOn){
+                    outtakeMiddle.setPower(1);
+                }
+                if(!intakeOn && !outtakeOn){
+                    outtakeMiddle.setPower(-0.4);
+                }
+                if(!intakeOn && outtakeOn){
+                    outtakeMiddle.setPower(1);
+                }
+                if(intakeOn && !outtakeOn){
+                    outtakeMiddle.setPower(-0.5);
+                }
+
+                //Intake Motor Control
+                if(intakeOn && outtakeOn){
+                    intake.setPower(0);
+                }
+                if(!intakeOn && !outtakeOn){
+                    intake.setPower(0);
+                }
+                if(!intakeOn && outtakeOn){
+                    intake.setPower(0);
+                }
+                if(intakeOn && !outtakeOn){
+                    intake.setPower(1);
+                }
             }
 
-            //Outtake Middle Control
-            if(intakeOn && outtakeOn){
-                outtakeMiddle.setPower(1);
+            if(gamepad2.dpad_up){
+                nectarEquation += 10;
+                sleep(100);
             }
-            if(!intakeOn && !outtakeOn){
-                outtakeMiddle.setPower(0);
+            if(gamepad2.dpad_down){
+                nectarEquation -= 10;
+                sleep(100);
             }
-            if(!intakeOn && outtakeOn){
-                outtakeMiddle.setPower(1);
+            if(gamepad2.dpad_left){
+                pollenEquation -= 10;
+                sleep(100);
             }
-            if(intakeOn && !outtakeOn){
-                outtakeMiddle.setPower(-1);
-            }
-
-            //Intake Motor Control
-            if(intakeOn && outtakeOn){
-                intake.setPower(0);
-            }
-            if(!intakeOn && !outtakeOn){
-                intake.setPower(0);
-            }
-            if(!intakeOn && outtakeOn){
-                intake.setPower(0);
-            }
-            if(intakeOn && !outtakeOn){
-                intake.setPower(1);
+            if(gamepad2.dpad_right){
+                pollenEquation += 10;
+                sleep(100);
             }
 
-            OP.update();
-            telemetry.addData("setVel",outtakeVel);
-            telemetry.addData("X", -op.getY(DistanceUnit.INCH));
-            telemetry.addData("Y", -op.getX(DistanceUnit.INCH));
-            master.motorInfo(outtake);
+            master.setPollenEquation(pollenEquation);
+            master.setNectarEquation(nectarEquation);
+
+            telemetry.addData("Pollen Equation", pollenEquation);
+            telemetry.addData("Nectar Equation", nectarEquation);
             telemetry.update();
         }
     }
